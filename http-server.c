@@ -9,9 +9,12 @@
 #include <unistd.h>
 
 #define SOCKET_PATH "/tmp/socketfiletmp.socket"
+#define LISTEN_BACKLOG 50
+
 
 // The downside to this approach is the lack of customised error message. Easily addable though...
-void handle_error() {
+void handle_error(char* error_text) {
+    fprintf(stderr, "%s\n", error_text);
     fprintf(stderr, "Oh blimey! Somethin' went wrong, mate: %s\n", strerror(errno));
     exit(EXIT_FAILURE);
 }
@@ -51,7 +54,7 @@ int main(int argc, char *argv[]) {
 
     // Check if socket was opened successfully
     if (fd == -1) {
-        handle_error();
+        handle_error("Socket creation failed.");
     }
 
     // If a socket has been created successfully, we must bind it to an address.
@@ -62,11 +65,44 @@ int main(int argc, char *argv[]) {
         .sun_path = SOCKET_PATH
     };
     
+    const int temp = 1; 
+    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &temp, sizeof(int)) < 0) {
+        perror("setsockopt");
+        /* Handle error here */
+        handle_error("Set socket option failed.");    
+    } 
+
     // On success, 0 is returned. This value is unimportant to us.
     if (bind(fd, (const struct sockaddr *) &addr, sizeof(addr)) == -1) {
-        handle_error();
+        handle_error("Bind failed.");
     }
+    printf("Binding successful.\n");
 
+    printf("Listening...\n");
+    // After binding it, we should listen to incoming connections
+    if (listen(fd, LISTEN_BACKLOG) == -1) {
+        handle_error("Listen failed.");
+    } 
+    printf("Listening over.\n");
+    
+    socklen_t peer_addr_size;
+    struct sockaddr_un peer_addr;
+    peer_addr_size = sizeof(peer_addr); 
+    
+    // A new socket (file descriptor) is created by accept(...) for the communication
+    int cfd; 
+    cfd = accept(fd, (struct sockaddr *) &peer_addr, &peer_addr_size); // Why are we passing address of a size var?
+    if (cfd == -1) {
+        handle_error("Accept connection failed.");
+    }
+    printf("Accepted connection,\n");
+    
+    // Closing the connection 
+    if (close(fd) == -1) { handle_error("Close failed."); }
+    
+    if (unlink(SOCKET_PATH) == -1) { handle_error("Unlinked failed."); }
+
+    
     // Successful execution!
     printf("Your bluetewth dewice haz connecketed sussessfolly.\n");
     return 0;
