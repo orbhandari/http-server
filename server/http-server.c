@@ -12,7 +12,6 @@
 #define LISTEN_BACKLOG 50
 
 
-// The downside to this approach is the lack of customised error message. Easily addable though...
 void handle_error(char* error_text) {
     fprintf(stderr, "%s\n", error_text);
     fprintf(stderr, "Oh blimey! Somethin' went wrong, mate: %s\n", strerror(errno));
@@ -97,6 +96,11 @@ int main(int argc, char *argv[]) {
     }
     printf("Accepted connection,\n");
     
+    int BUFF_SIZE = 50;
+    char msg_buffer[BUFF_SIZE];
+    recv(cfd, msg_buffer, BUFF_SIZE, MSG_DONTWAIT);  
+    printf("%s\n", msg_buffer);
+
     // Closing the connection 
     if (close(fd) == -1) { handle_error("Close failed."); }
     
