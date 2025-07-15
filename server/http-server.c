@@ -4,13 +4,18 @@
 #include <string.h> // Useful string handling and printing functions
 #include <netdb.h> // Useful for getaddrinfo, gethostbyname, etc.
 #include <stdlib.h> 
+#include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include <netinet/in.h> 
 
 #define SOCKET_PATH "/tmp/socketfiletmp.socket"
 #define LISTEN_BACKLOG 50
 
+#define TRUE 1
+#define FALSE 0
+#define BOOL char
 
 void handle_error(char* error_text) {
     fprintf(stderr, "%s\n", error_text);
@@ -23,21 +28,12 @@ int main(int argc, char *argv[]) {
     printf("Version of C: %ld\n", __STDC_VERSION__);
 
 
-    // Require a port where the server listens to
+    // Require a port where the server listens to. Not needed if IPC.
     if (argc != 2) {
         fprintf(stderr, "Usage: %s port\n", argv[0]);
         exit(EXIT_FAILURE);
     }
     
-    // 
-    struct addrinfo hints = {
-        .ai_family = AF_UNSPEC,
-        .ai_socktype = SOCK_STREAM,
-        .ai_flags = AI_PASSIVE
-    };
-    struct addrinfo *results, *rp;
-
-
     // We get back the lowest available file descriptor
     // AF_UNIX stands for inter-process communication on the same machine
     // SOCK_SEQPACKET is for sequenced and reliable duplex 
@@ -48,61 +44,66 @@ int main(int argc, char *argv[]) {
     // This fd *points* to an entry in the file descriptor table, which in turn points to global file table.
     // Hence, a socket should be a file. More precisely, it is a pseudo-file.
     // A pseudo-file is just a file that lives in memory, instead of normal files that can be stored on disc.
-    int fd = socket(AF_UNIX, SOCK_SEQPACKET, 0); 
-    printf("Socket file descriptor: %d\n", fd);
+    int tcp_socket = socket(AF_INET, SOCK_STREAM, 0); 
+    printf("Socket file descriptor: %d\n", tcp_socket);
 
     // Check if socket was opened successfully
-    if (fd == -1) {
+    if (tcp_socket == -1) {
         handle_error("Socket creation failed.");
     }
 
     // If a socket has been created successfully, we must bind it to an address.
     // That is, once a baby is born, it exists in the world, 
     // but then we must give it a name and register it in the government directories.
-    const struct sockaddr_un addr = {
-        .sun_family = AF_UNIX,
-        .sun_path = SOCKET_PATH
+    const struct sockaddr_in addr = {
+        .sin_family = AF_INET,
+        .sin_port = htons(6969),
+        .sin_addr = htonl(INADDR_LOOPBACK)
     };
     
-    const int temp = 1; 
-    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &temp, sizeof(int)) < 0) {
-        perror("setsockopt");
-        /* Handle error here */
-        handle_error("Set socket option failed.");    
-    } 
+    // const int temp = 1; 
+    // if (setsockopt(tcp_socket, SOL_SOCKET, SO_REUSEADDR, &temp, sizeof(int)) < 0) {
+    //     perror("setsockopt");
+    //     /* Handle error here */
+    //     handle_error("Set socket option failed.");    
+    // } 
 
     // On success, 0 is returned. This value is unimportant to us.
-    if (bind(fd, (const struct sockaddr *) &addr, sizeof(addr)) == -1) {
+    if (bind(tcp_socket, (const struct sockaddr *) &addr, sizeof(addr)) == -1) {
         handle_error("Bind failed.");
     }
     printf("Binding successful.\n");
 
-    printf("Listening...\n");
-    // After binding it, we should listen to incoming connections
-    if (listen(fd, LISTEN_BACKLOG) == -1) {
+    printf("Putting into listening state...\n");
+    // After binding it, we should listen to incoming connections. This more means "setting into listening state".
+    if (listen(tcp_socket, LISTEN_BACKLOG) == -1) {
         handle_error("Listen failed.");
     } 
-    printf("Listening over.\n");
+    printf("Putted into listening state.\n");
     
     socklen_t peer_addr_size;
-    struct sockaddr_un peer_addr;
+    struct sockaddr_in peer_addr;
     peer_addr_size = sizeof(peer_addr); 
     
     // A new socket (file descriptor) is created by accept(...) for the communication
-    int cfd; 
-    cfd = accept(fd, (struct sockaddr *) &peer_addr, &peer_addr_size); // Why are we passing address of a size var?
-    if (cfd == -1) {
+    int tcp_socket_talking; 
+    // The accept function *blocks* until there exists at least one connector client!
+    // TODO: It may be useful to use a timeout here... otherwise 
+    tcp_socket_talking = accept(tcp_socket, (struct sockaddr *) &peer_addr, &peer_addr_size); // Why are we passing address of a size var?
+    if (tcp_socket_talking == -1) {
         handle_error("Accept connection failed.");
     }
     printf("Accepted connection,\n");
     
     int BUFF_SIZE = 50;
     char msg_buffer[BUFF_SIZE];
-    recv(cfd, msg_buffer, BUFF_SIZE, MSG_DONTWAIT);  
-    printf("%s\n", msg_buffer);
-
+    
+    while (TRUE) {
+        recv(tcp_socket_talking, msg_buffer, BUFF_SIZE, MSG_DONTWAIT);  
+        printf("%s\n", msg_buffer);
+    } 
     // Closing the connection 
-    if (close(fd) == -1) { handle_error("Close failed."); }
+    if (close(tcp_socket) == -1) { handle_error("Close failed."); }
     
     if (unlink(SOCKET_PATH) == -1) { handle_error("Unlinked failed."); }
 
