@@ -34,6 +34,8 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Usage: %s port\n", argv[0]);
         exit(EXIT_FAILURE);
     }
+
+    int port = atoi(argv[1]);
     
     // We get back the lowest available file descriptor
     // AF_UNIX stands for inter-process communication on the same machine
@@ -58,7 +60,7 @@ int main(int argc, char *argv[]) {
     // but then we must give it a name and register it in the government directories.
     const struct sockaddr_in addr = {
         .sin_family = AF_INET,
-        .sin_port = htons(6969),
+        .sin_port = htons(port),
         .sin_addr = htonl(INADDR_LOOPBACK)
     };
     
@@ -102,11 +104,11 @@ int main(int argc, char *argv[]) {
     while (TRUE) {
         // Peek the message and check if the one in msg_buffer if the same or not
         // If the same, continue
-        // else, print the new message out
-        
+        // else, print the new message 
         int rv = recv(tcp_socket_talking, msg_buffer, BUFF_SIZE, MSG_WAITALL);
+
         if (rv == 0) {
-            printf("Peer has shutdown.\n");
+            printf("\nPeer has shutdown.\n");
             break;
         }
 
@@ -117,6 +119,6 @@ int main(int argc, char *argv[]) {
     if (close(tcp_socket) == -1) { handle_error("Close failed."); }
     
     // Successful execution!
-    printf("Your bluetewth dewice haz connecketed sussessfolly.\n");
+    printf("\nYour bluetewth dewice haz connecketed sussessfolly.\n");
     return 0;
 }
