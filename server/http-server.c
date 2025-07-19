@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <netinet/in.h> 
 
+// TODO: Remove SOCKET_PATH 
 #define SOCKET_PATH "/tmp/socketfiletmp.socket"
 #define LISTEN_BACKLOG 50
 
@@ -93,20 +94,27 @@ int main(int argc, char *argv[]) {
     if (tcp_socket_talking == -1) {
         handle_error("Accept connection failed.");
     }
-    printf("Accepted connection,\n");
+    printf("Accepted connection\n");
     
     int BUFF_SIZE = 50;
     char msg_buffer[BUFF_SIZE];
     
     while (TRUE) {
-        recv(tcp_socket_talking, msg_buffer, BUFF_SIZE, MSG_DONTWAIT);  
-        printf("%s\n", msg_buffer);
+        // Peek the message and check if the one in msg_buffer if the same or not
+        // If the same, continue
+        // else, print the new message out
+        
+        int rv = recv(tcp_socket_talking, msg_buffer, BUFF_SIZE, MSG_WAITALL);
+        if (rv == 0) {
+            printf("Peer has shutdown.\n");
+            break;
+        }
+
+        printf("%s", msg_buffer);
     } 
+
     // Closing the connection 
     if (close(tcp_socket) == -1) { handle_error("Close failed."); }
-    
-    if (unlink(SOCKET_PATH) == -1) { handle_error("Unlinked failed."); }
-
     
     // Successful execution!
     printf("Your bluetewth dewice haz connecketed sussessfolly.\n");
