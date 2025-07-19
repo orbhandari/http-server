@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
     const struct sockaddr_in addr = {
         .sin_family = AF_INET,
         .sin_port = htons(port),
-        .sin_addr = htonl(INADDR_LOOPBACK)
+        .sin_addr = htonl(INADDR_ANY) // 0.0.0.0 - is it safe?
     };
     
     // const int temp = 1; 
@@ -97,6 +97,8 @@ int main(int argc, char *argv[]) {
         handle_error("Accept connection failed.");
     }
     printf("Accepted connection\n");
+    printf("Client information: address = %s, port = %d\n", 
+           inet_ntoa(peer_addr.sin_addr), ntohs(peer_addr.sin_port));
     
     int BUFF_SIZE = 50;
     char msg_buffer[BUFF_SIZE];

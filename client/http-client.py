@@ -6,6 +6,24 @@ Used to test the HTTP server project implementation in C.
 import httpx 
 
 """
+CLI
+"""
+user_yes_or_no = input("Are you sure the server has started? [Y/N]")
+if user_yes_or_no.lower() != "y":
+    print("Exiting...")
+    exit(0)
+
+port = int(input("Enter the port number of the server: "))
+
+if not port:
+    print("No port provided, using default port 8080.")
+    port = "8080"
+
+if port < 1024:
+    print("Port number should be above 1024 for non-root users. Using port 8080 instead.")
+    port = "8080"
+
+"""
 This is what we send.
 GET / HTTP/1.1
 Host: localhost:9999
@@ -21,7 +39,6 @@ Serving HTTP on 127.0.0.1 port 8080 (http://127.0.0.1:8080/) ...
 127.0.0.1 - - [20/Jul/2025 00:49:04] "GET / HTTP/1.1" 200 -
 
 """
-port = 8080
 request = httpx.get(f"http://localhost:{port}")
 
 print("Status code: ", request.status_code)
