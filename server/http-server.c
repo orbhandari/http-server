@@ -103,19 +103,20 @@ int main(int argc, char *argv[]) {
     int BUFF_SIZE = 50;
     char msg_buffer[BUFF_SIZE];
     
-    while (TRUE) {
-        // Peek the message and check if the one in msg_buffer if the same or not
-        // If the same, continue
-        // else, print the new message 
-        int rv = recv(tcp_socket_talking, msg_buffer, BUFF_SIZE, MSG_WAITALL);
 
-        if (rv == 0) {
-            printf("\nPeer has shutdown.\n");
-            break;
-        }
+    int rv = recv(tcp_socket_talking, msg_buffer, BUFF_SIZE, MSG_WAITALL);
 
-        printf("%s", msg_buffer);
-    } 
+    if (rv == 0) {
+        printf("\nPeer has shutdown.\n");
+    }
+    
+    // Printing the full unprocessed message from client
+    printf("%s\n", msg_buffer);
+
+    // Get the first line only
+    char * token = strtok(msg_buffer, "\r\n"); 
+    printf("Extracted token: %s\n", token);
+
 
     // Closing the connection 
     if (close(tcp_socket) == -1) { handle_error("Close failed."); }
